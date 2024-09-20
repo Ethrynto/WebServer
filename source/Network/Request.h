@@ -6,8 +6,8 @@
 #include <boost/bind/bind.hpp>
 #include <memory>
 #include <string>
-#include <ctime>
 #include <iostream>
+#include <fstream>
 
 using BoostTCP = boost::asio::ip::tcp;
 
@@ -17,12 +17,11 @@ namespace Network
 
     class Request : public boost::enable_shared_from_this<Request>
     {
-        static std::string TestMessage();
-
         HttpServer& server;
         boost::asio::streambuf request;
         boost::asio::streambuf response;
 
+        static std::string readFile(const std::string& path);
         void afterRead(const boost::system::error_code& ec, std::size_t bytes_transferred);
         void afterWrite(const boost::system::error_code& ec, std::size_t bytes_transferred);
 

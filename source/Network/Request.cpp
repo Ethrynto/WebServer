@@ -1,34 +1,54 @@
-#include "Request.h"
+﻿#include "Request.h"
 #include "HttpServer.h"
-
-std::string Network::Request::TestMessage()
-{
-    
-    std::time_t now = std::time(0);
-    std::string result = "Hello world! Test message. Local time: ";
-    result.append(std::ctime(&now));
-    return result;
-}
 
 Network::Request::Request(HttpServer& server) : server(server)
 {
     socket.reset(new BoostTCP::socket(server.io_service));
 }
 
-void Network::Request::afterRead(const boost::system::error_code& ec, std::size_t bytes_transferred)
-{
+// Method for read the HTML-file
+std::string Network::Request::readFile(const std::string& path) {
+    std::ifstream file(path);
+    if (!file) {
+        return ""; // If file not found, return the empty string
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+}
+
+void Network::Request::afterRead(const boost::system::error_code& ec, std::size_t bytes_transferred) {
     if (!ec) {
         if (bytes_transferred > 0) {
-            std::ostream res_stream(&response);
-            std::string message = TestMessage();
+            std::istream request_stream(&request);
+            std::string request_line;
+            std::getline(request_stream, request_line);
 
-            res_stream << "HTTP/1.0 200 OK\r\n"
-                << "Content-Type: text/html; charset=UTF-8\r\n"
-                << "Content-Length: " << message.length() + 32 << "\r\n\r\n"
-                << message << "\r\n";
+            // Extracting the requested path
+            std::string path = request_line.substr(4, request_line.find(' ', 4) - 4); // To get path from the request
+            if (path == "/") {
+                path = "/index.html"; // If request the root, usage index.html
+            }
 
-            if (socket) {
-                boost::asio::async_write(*socket, response, boost::bind(&Network::Request::afterWrite, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+            // Read HTML-file
+            std::string content = readFile(DOMAINS_PATH + path);
+
+            if (!content.empty()) {
+                std::ostream res_stream(&response);
+                res_stream << "HTTP/1.0 200 OK\r\n"
+                    << "Content-Type: text/html; charset=UTF-8\r\n"
+                    << "Content-Length: " << content.length() << "\r\n\r\n"
+                    << content;
+
+                if (socket) {
+                    boost::asio::async_write(*socket, response, boost::bind(&Request::afterWrite, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+                }
+            }
+            else {
+                // If we couldt find file, return 404
+                std::ostream res_stream(&response);
+                res_stream << "HTTP/1.0 404 Not Found\r\n"
+                    << "Content-Type: text/html; charset=UTF-8\r\n"
+                    << "Content-Length: 0\r\n\r\n";
+                socket->close();
             }
         }
         else {
@@ -39,6 +59,7 @@ void Network::Request::afterRead(const boost::system::error_code& ec, std::size_
         std::cerr << "Error reading: " << ec.message() << std::endl;
     }
 }
+
 
 void Network::Request::afterWrite(const boost::system::error_code& ec, std::size_t bytes_transferred)
 {
