@@ -31,8 +31,21 @@ endif ()
 # Add "source" directory
 add_subdirectory("source")
 
-# target_compile_definitions("${PROJECT_NAME}" PUBLIC CURRENCY_APIKEY="") 
-# target_compile_definitions("${PROJECT_NAME}" PUBLIC CRYPTO_APIKEY="") 
+if(PRODUCTION_BUILD)
+	# setup the DOMAINS_PATH macro to be in the root folder of your exe
+	target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC DOMAINS_PATH="./domains/") 
+
+	# remove the option to debug asserts.
+	target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC PRODUCTION_BUILD=1) 
+
+else()
+	# This is useful to get an DOMAINS_PATH in your IDE during development
+	target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC DOMAINS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/domains/")
+	target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC PRODUCTION_BUILD=0) 
+
+endif()
+
+# target_compile_definitions("${PROJECT_NAME}" PUBLIC API="") 
 
 # If BOOST is finded
 if (Boost_FOUND)
