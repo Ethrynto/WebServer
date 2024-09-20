@@ -1,9 +1,9 @@
 ﻿#include "Request.h"
 #include "HttpServer.h"
 
-Network::Request::Request(HttpServer& server) : server(server)
+Network::Request::Request(boost::asio::io_service& io_service)
 {
-    socket.reset(new BoostTCP::socket(server.io_service));
+    socket.reset(new BoostTCP::socket(io_service));
 }
 
 // Method for read the HTML-file

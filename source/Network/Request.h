@@ -13,17 +13,14 @@ using BoostTCP = boost::asio::ip::tcp;
 
 namespace Network
 {
-    class HttpServer; // forward declaration
-
     class Request : public boost::enable_shared_from_this<Request>
     {
     public:
         std::shared_ptr<BoostTCP::socket> socket;
-        Request(HttpServer& server);
+        Request(boost::asio::io_service& io_service);
         void processRequest();
 
     private:
-        HttpServer& server;
         boost::asio::streambuf request;
         boost::asio::streambuf response;
 

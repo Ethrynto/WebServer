@@ -21,7 +21,7 @@ void Network::HttpServer::runServiceLoop()
 
 void Network::HttpServer::beginAcceptingConnections()
 {
-    boost::shared_ptr<Request> req(new Network::Request(*this));
+    boost::shared_ptr<Request> req(new Network::Request(this->io_service));
     acceptor.async_accept(*req->socket,
         boost::bind(&Network::HttpServer::handleNewConnection, this, req, boost::placeholders::_1));
 }
