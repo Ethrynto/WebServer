@@ -18,17 +18,18 @@ namespace Network
     public:
         HttpServer(unsigned int port);
         ~HttpServer();
-        void Run();
+
+        void start();
 
         boost::asio::io_service io_service;
-
     private:
+        
         BoostTCP::acceptor acceptor;
         std::shared_ptr<std::thread> sThread;
 
-        void startThread();
-        void startAccept();
-        void handleAccept(boost::shared_ptr<Request> req, const boost::system::error_code& error);
+        void runServiceLoop();
+        void beginAcceptingConnections();
+        void handleNewConnection(boost::shared_ptr<Request> req, const boost::system::error_code& error);
     };
 };
 

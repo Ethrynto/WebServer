@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
     }
     
     Network::HttpServer server(serverPort);
-    server.Run();
+    server.start();
 
 	std::cout << "Server start on port: " << serverPort << std::endl;
 }
