@@ -15,7 +15,7 @@ std::string Network::Request::readFile(const std::string& path) {
     return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 }
 
-void Network::Request::afterRead(const boost::system::error_code& ec, std::size_t bytes_transferred) {
+void Network::Request::handleReadCompletion(const boost::system::error_code& ec, std::size_t bytes_transferred) {
     if (!ec) {
         if (bytes_transferred > 0) {
             std::istream request_stream(&request);
@@ -39,7 +39,7 @@ void Network::Request::afterRead(const boost::system::error_code& ec, std::size_
                     << content;
 
                 if (socket) {
-                    boost::asio::async_write(*socket, response, boost::bind(&Request::afterWrite, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+                    boost::asio::async_write(*socket, response, boost::bind(&Request::handleWriteCompletion, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
                 }
             }
             else {
@@ -61,15 +61,15 @@ void Network::Request::afterRead(const boost::system::error_code& ec, std::size_
 }
 
 
-void Network::Request::afterWrite(const boost::system::error_code& ec, std::size_t bytes_transferred)
+void Network::Request::handleWriteCompletion(const boost::system::error_code& ec, std::size_t bytes_transferred)
 {
     socket->close();
 }
 
-void Network::Request::answer()
+void Network::Request::processRequest()
 {
     if (!socket) return;
 
     boost::asio::async_read_until(*socket, request, "\r\n\r\n",
-        boost::bind(&Network::Request::afterRead, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+        boost::bind(&Network::Request::handleReadCompletion, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
 }

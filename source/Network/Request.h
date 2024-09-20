@@ -17,18 +17,19 @@ namespace Network
 
     class Request : public boost::enable_shared_from_this<Request>
     {
+    public:
+        std::shared_ptr<BoostTCP::socket> socket;
+        Request(HttpServer& server);
+        void processRequest();
+
+    private:
         HttpServer& server;
         boost::asio::streambuf request;
         boost::asio::streambuf response;
 
         static std::string readFile(const std::string& path);
-        void afterRead(const boost::system::error_code& ec, std::size_t bytes_transferred);
-        void afterWrite(const boost::system::error_code& ec, std::size_t bytes_transferred);
-
-    public:
-        std::shared_ptr<BoostTCP::socket> socket;
-        Request(HttpServer& server);
-        void answer();
+        void handleReadCompletion(const boost::system::error_code& ec, std::size_t bytes_transferred);
+        void handleWriteCompletion(const boost::system::error_code& ec, std::size_t bytes_transferred);
     };
 };
 
