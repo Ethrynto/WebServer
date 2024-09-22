@@ -27,6 +27,9 @@ namespace Network
         BoostTCP::acceptor acceptor;
         std::shared_ptr<std::thread> sThread;
 
+        /*
+            
+        */
         void runServiceLoop();
         void beginAcceptingConnections();
         void handleNewConnection(boost::shared_ptr<Request> req, const boost::system::error_code& error);

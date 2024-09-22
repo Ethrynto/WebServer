@@ -1,8 +1,8 @@
 ﻿
 set(CPP_FILES 
-"main.cpp" "Network/HttpServer.cpp" "Network/Request.cpp")
+"main.cpp" "Network/HttpServer.cpp" "Network/Request.cpp" "System/FileManager.cpp")
 
-set(HEADER_FILES  "Network/HttpServer.h" "Network/Request.h")
+set(HEADER_FILES  "Network/HttpServer.h" "Network/Request.h" "System/FileManager.h")
 
 # Add source to this project's executable.
 # add_executable (MicroTools "MicroTools.cpp" "Networking/Client.h" "Networking/Client.cpp" "System/Array.h")
