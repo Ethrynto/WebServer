@@ -1,6 +1,10 @@
 ## Description
 This is a simple web server, processes the request and outputs the result. Works in asynchronous mode, so it is possible to process several requests simultaneously
 
+## Dependencies
+• <a href="https://boost.org">Boost</a>
+• <a href="https://cmake.org/">CMake</a>
+
 ## Installation
 1) Download and install <a href="https://boost.org">Boost</a> (If not installed)
 2) Download and install <a href="https://cmake.org/download/">CMake</a> (If not installed)
