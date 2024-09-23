@@ -3,12 +3,31 @@
 
 /*
     Create a new socket
+
     @param io_service - from HttpServer
 */
 Network::Request::Request(boost::asio::io_service& io_service)
 {
     socket.reset(new BoostTCP::socket(io_service));
+    this->domainsPath = DOMAINS_PATH;
 }
+
+/*
+    Create a new socket
+
+    @param io_service - from HttpServer
+*/
+Network::Request::Request(boost::asio::io_service& io_service, std::string path)
+{
+    socket.reset(new BoostTCP::socket(io_service));
+    this->domainsPath = DOMAINS_PATH;
+    this->domainsPath.append(path);
+
+    /*** Check, that path to end at \ ***/
+    if (this->domainsPath[this->domainsPath.size() - 1] != '\\' || this->domainsPath[this->domainsPath.size() - 1] != '/')
+        this->domainsPath.append("\\");
+}
+
 
 /*
     Method for read the HTML - file
@@ -40,8 +59,9 @@ void Network::Request::handleReadCompletion(const boost::system::error_code& ec,
                 path = "/index.html"; // If request the root, usage index.html
             }
 
+            std::cout << this->domainsPath << std::endl;
             // Read HTML-file
-            std::string content = readFile(DOMAINS_PATH + path);
+            std::string content = readFile(this->domainsPath + path);
 
             if (!content.empty()) 
             {

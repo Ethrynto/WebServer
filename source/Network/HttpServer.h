@@ -17,6 +17,7 @@ namespace Network
     {
     public:
         HttpServer(unsigned int port);
+        HttpServer(unsigned int port, std::string domainsPath);
         ~HttpServer();
 
         void start();
@@ -26,6 +27,7 @@ namespace Network
         
         BoostTCP::acceptor acceptor;
         std::shared_ptr<std::thread> sThread;
+        std::string domainsPath;
 
         /*
             

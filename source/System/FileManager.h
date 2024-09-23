@@ -1,6 +1,9 @@
 #pragma once
 #include <iostream>
+#include <vector>
+#include <map>
 #include <windows.h>
+
 #ifndef FILEMANAGER_H
 #define FILEMANAGER_H
 
@@ -16,6 +19,16 @@ namespace System
 		{	}
 		~FileManager()
 		{	}
+
+
+		/*
+			Returns the vector of folder names in the selected directory.
+
+			@param path example: "C:\Users\user_name\Documents\"
+		*/
+		std::vector<std::string> static getFolders(const std::string path);
+		std::vector<std::string> getFolders();
+
 
 		/*
 			Returns the number of folders in the selected directory.
@@ -41,8 +54,12 @@ namespace System
 		*/
 		int static countAll(const std::string path);
 		int countAll();
+
 	private:
 		std::string currentPath;
+		std::vector<std::string> currentFolders;
+		unsigned int currentFoldersNumber;
+		unsigned int currentAllFilesNumber;
 	};
 
 }

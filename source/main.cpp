@@ -1,19 +1,16 @@
 ﻿#include <iostream>
+#include <vector>
+#include <thread>
+
 #include "Network/HttpServer.h"
 #include "System/FileManager.h"
+#include "Network/Server.h"
 
 int main(int argc, char* argv[])
 {
-    //int serverPort = 8080;
-    //if (argc >= 2)
-    //{
-    //    /* Custom port (convert char** arg to int for port) */
-    //    serverPort = atoi(argv[1]);
-    //}
-    //
-    //Network::HttpServer server(serverPort);
-    //server.start();
+    System::FileManager* domains = new System::FileManager(DOMAINS_PATH);
+    int serverPort = 8080;
 
-    System::FileManager test("C:\\Users\\doniff\\source\\repos\\WebServer\\domains\\");
-    std::cout << test.countFolders();
+
+    delete domains;
 }

@@ -2,6 +2,7 @@
 # and include sub-projects here.
 #
 cmake_minimum_required (VERSION 3.8)
+cmake_policy(SET CMP0079 NEW) # Settinc policy
 
 set(PROJECT_NAME "WebServer")
 
@@ -21,11 +22,13 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 set(BOOST_ALL_DYN_LINK OFF)
   
 # Find BOOST package
-find_package (Boost REQUIRED) 
+find_package (Boost REQUIRED COMPONENTS system filesystem thread) 
   
 # If BOOST is finded
 if (Boost_FOUND)
     include_directories(SYSTEM ${Boost_INCLUDE_DIR}) # to link the header files
+else()
+	# include_directories(${OPENSSL_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS})
 endif ()
 
 # Add "source" directory
@@ -41,6 +44,8 @@ if(PRODUCTION_BUILD)
 else()
 	# This is useful to get an DOMAINS_PATH in your IDE during development
 	target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC DOMAINS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/domains/")
+
+	# add the option to debug asserts.
 	target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC PRODUCTION_BUILD=0) 
 
 endif()
@@ -49,5 +54,8 @@ endif()
 
 # If BOOST is finded
 if (Boost_FOUND)
-    target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES}) # to link library
+    target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES}) # to link library   
+else()
+	#target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}) # to link library
 endif ()
+
