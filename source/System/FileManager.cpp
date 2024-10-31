@@ -10,7 +10,7 @@ std::vector<std::string> System::FileManager::getFolders(const std::string path)
 	std::vector<std::string> folders;
 
 	WIN32_FIND_DATA findFileData;
-	HANDLE hFind = FindFirstFile((path + "\*").c_str(), &findFileData); // Add "\*" that to read all files in path
+	HANDLE hFind = FindFirstFile((path + "\\*").c_str(), &findFileData); // Add "\*" that to read all files in path
 
 	if (hFind == INVALID_HANDLE_VALUE)
 	{
@@ -54,7 +54,7 @@ std::vector<std::string> System::FileManager::getFolders()
 int System::FileManager::countFolders(const std::string path)
 {
 	WIN32_FIND_DATA findFileData;
-	HANDLE hFind = FindFirstFile((path + "\*").c_str(), &findFileData); // Add "\*" that to read all files in path
+	HANDLE hFind = FindFirstFile((path + "\\*").c_str(), &findFileData); // Add "\*" that to read all files in path
 	int dirCount = 0; // Count of finded files
 
 	if (hFind == INVALID_HANDLE_VALUE)
