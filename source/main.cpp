@@ -1,19 +1,23 @@
 ﻿#include <iostream>
 #include <vector>
 
-#include "System/FileManager.h"
-#include "Network/HttpServer.h"
+#include "Network/WebServer.h"
 
-int main(int argc, char* argv[])
+int main()
 {
-    System::FileManager* domains = new System::FileManager(DOMAINS_PATH);
-    int serverPort = 8080;
+    try {
+        boost::asio::io_context ioContext;
 
-    std::vector<Network::HttpServer*> servers;
-    servers.push_back(new Network::HttpServer(8080, "Test\\"));
-    servers.push_back(new Network::HttpServer(8081, "Test2\\"));
-    servers[0]->start();
-    servers[1]->start();
+        std::vector<std::pair<int, std::string>> projects = {
+            {8080, DOMAINS_PATH "/Test"},
+            {8081, DOMAINS_PATH "/Test2"},
+        };
 
-    delete domains;
+        Network::WebServer server(ioContext, projects);
+        server.start();
+    } catch (const std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+    }
+
+    return 0;
 }
