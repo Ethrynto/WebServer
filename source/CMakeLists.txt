@@ -2,10 +2,14 @@
 		main.cpp
 		System/FileManager.cpp
 		System/FileManager.h
+
 		Network/WebServer.cpp
 		Network/WebServer.h
 		Network/RequestHandler.cpp
 		Network/RequestHandler.h
+
+		Debug/Log.cpp
+		Debug/Log.h
 )
 
 # Add source to this project's executable.
