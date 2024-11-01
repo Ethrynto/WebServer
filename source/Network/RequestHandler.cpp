@@ -3,14 +3,16 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <utility>
 
+#include "../Debug/Log.h"
 
 namespace Network {
 
-    RequestHandler::RequestHandler(boost::asio::io_context& ioContext, const std::string& rootDir)
-    : ioContext_(ioContext), rootDir_(rootDir) {}
+    RequestHandler::RequestHandler(boost::asio::io_context& ioContext, std::string  rootDir)
+    : ioContext_(ioContext), rootDir_(std::move(rootDir)) {}
 
-void RequestHandler::handleRequest(std::shared_ptr<boost::asio::ip::tcp::socket> socket) {
+void RequestHandler::handleRequest(const std::shared_ptr<boost::asio::ip::tcp::socket>& socket) {
     try {
         boost::asio::streambuf requestBuffer;
         boost::asio::read_until(*socket, requestBuffer, "\r\n\r\n");
@@ -25,9 +27,8 @@ void RequestHandler::handleRequest(std::shared_ptr<boost::asio::ip::tcp::socket>
 
         if (method == "GET") {
             std::string filePath = rootDir_ + path;
-            if (filePath.back() == '/') {
+            if (filePath.back() == '/')
                 filePath += "index.html";
-            }
 
             if (filePath.ends_with(".php")) {
                 handlePhpRequest(socket, filePath);
@@ -49,7 +50,7 @@ void RequestHandler::handleRequest(std::shared_ptr<boost::asio::ip::tcp::socket>
             sendNotFoundRequest(socket);
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error handling request: " << e.what() << std::endl;
+        Debug::Log::alert("Error handling request", "RequestHandler::handleRequest");
     }
 }
 
@@ -57,9 +58,9 @@ std::string RequestHandler::getRootDirectory() const {
     return rootDir_;
 }
 
-void RequestHandler::handlePhpRequest(std::shared_ptr<boost::asio::ip::tcp::socket> socket, const std::string& filePath) {
-    std::string command = "php " + filePath;
-    std::array<char, 128> buffer;
+void RequestHandler::handlePhpRequest(const std::shared_ptr<boost::asio::ip::tcp::socket>& socket, const std::string& filePath) {
+    const std::string command = "php " + filePath;
+    std::array<char, 128> buffer {};
     std::string result;
 
     std::shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pclose);
@@ -82,15 +83,13 @@ void RequestHandler::handlePhpRequest(std::shared_ptr<boost::asio::ip::tcp::sock
 }
 
 std::string RequestHandler::getContentType(const std::string& filePath) {
-    if (filePath.ends_with(".html")) {
+    if (filePath.ends_with(".html") || filePath.ends_with(".php"))
         return "text/html";
-    } else if (filePath.ends_with(".php")) {
-        return "text/html";
-    }
+
     return "application/octet-stream";
 }
 
-void RequestHandler::sendNotFoundRequest(std::shared_ptr<boost::asio::ip::tcp::socket> socket)
+void RequestHandler::sendNotFoundRequest(const std::shared_ptr<boost::asio::ip::tcp::socket>& socket)
 {
     std::string response = "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n";
     boost::asio::write(*socket, boost::asio::buffer(response));
