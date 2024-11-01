@@ -26,7 +26,7 @@ namespace System
 
 			@param path example: "C:\Users\user_name\Documents\"
 		*/
-		std::vector<std::string> static getFolders(const std::string path);
+		std::vector<std::string> static getFolders(const std::string& path);
 		std::vector<std::string> getFolders();
 
 
@@ -35,7 +35,7 @@ namespace System
 
 			@param path example: "C:\Users\user_name\Documents\"
 		*/
-		int static countFolders(const std::string path);
+		int static countFolders(const std::string& path);
 		int countFolders();
 
 		/*
@@ -44,7 +44,7 @@ namespace System
 			@param path example: "C:\Users\user_name\Documents\"
 			@param fileType example: ".txt"
 		*/
-		int static countFiles(const std::string path, std::string fileType);
+		int static countFiles(const std::string& path, std::string fileType);
 		int countFiles(std::string fileType);
 
 		/*
@@ -52,7 +52,7 @@ namespace System
 
 			@param path example: "C:\Users\user_name\Documents\"
 		*/
-		int static countAll(const std::string path);
+		int static countAll(const std::string& path);
 		int countAll();
 
 	private:
