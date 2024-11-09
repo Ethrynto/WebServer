@@ -30,27 +30,26 @@ namespace System
 		std::vector<std::string> getFolders();
 
 
-		/*
+		/**
 			Returns the number of folders in the selected directory.
-
-			@param path example: "C:\Users\user_name\Documents\"
+			@param path the directory path
+			@return the folders number
 		*/
 		int static countFolders(const std::string& path);
 		int countFolders();
 
-		/*
+		/**
 			Return the number of (.fileType) in the selected directory.
-
-			@param path example: "C:\Users\user_name\Documents\"
-			@param fileType example: ".txt"
+			@param path the directory path
+			@param fileType the type of file
+			@return the files number
 		*/
 		int static countFiles(const std::string& path, std::string fileType);
 		int countFiles(std::string fileType);
 
-		/*
+		/**
 			Return the number all files and folders in the selected directory.
-
-			@param path example: "C:\Users\user_name\Documents\"
+			@param path the directory path
 		*/
 		int static countAll(const std::string& path);
 		int countAll();
