@@ -1,5 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 cmake_policy(SET CMP0079 NEW) # Settings policy
+set(CMAKE_EXE_LINKER_FLAGS "-static")   # Set static flag compiling
 
 set(PROJECT_NAME "WebServer")
 project (${PROJECT_NAME})
