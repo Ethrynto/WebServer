@@ -1,51 +1,66 @@
-﻿cmake_minimum_required (VERSION 3.8)
-cmake_policy(SET CMP0079 NEW) # Settings policy
-set(CMAKE_EXE_LINKER_FLAGS "-static")   # Set static flag compiling
+﻿cmake_minimum_required(VERSION 3.15...3.31)
+project(WebServer VERSION 1.0 LANGUAGES CXX)
 
-set(PROJECT_NAME "WebServer")
-project (${PROJECT_NAME})
+# Install the policy for Boost
+cmake_policy(SET CMP0167 NEW)
 
-# Enable Hot Reload for MSVC compilers if supported.
-if (POLICY CMP0141)
-  cmake_policy(SET CMP0141 NEW)
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
+# Install the C++ standart
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Integration with vcpkg
+if(DEFINED ENV{VCPKG_ROOT})
+	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 
+# Assembly options
+option(ENABLE_HTTPS "Enable HTTPS support" OFF)
+option(ENABLE_LOGGING "Enable logging with spdlog" ON)
+option(STATIC_BUILD "Build statically" OFF)
 
-# BOOST setting
-set(BOOST_ROOT "D:/Programming Projects/CPP Libraries/Boost") # The boost root path
-set(Boost_NO_SYSTEM_PATHS ON)
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
-set(BOOST_ALL_DYN_LINK OFF)
+# Static assembly
+if(STATIC_BUILD)
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+endif()
 
-# Find BOOST package
-find_package (Boost REQUIRED)
+# Library Search
+find_package(Boost 1.74 REQUIRED COMPONENTS system)
+find_package(nlohmann_json CONFIG REQUIRED)
+if(ENABLE_HTTPS)
+	find_package(OpenSSL REQUIRED)
+endif()
+if(ENABLE_LOGGING)
+	find_package(spdlog CONFIG REQUIRED)
+endif()
 
-# If BOOST is found
-if (Boost_FOUND)
-    include_directories(SYSTEM ${Boost_INCLUDE_DIR} ${asio_SOURCE_DIR}/asio/include) # to link the header files
-endif ()
+# Adding sources
+add_subdirectory(source)
 
-# Add "source" directory
-add_subdirectory("source")
-
+# Pathfinding
 if(PRODUCTION_BUILD)
-	target_compile_definitions("${PROJECT_NAME}" PUBLIC DOMAINS_PATH="./domains/")	# setup the DOMAINS_PATH
-	target_compile_definitions("${PROJECT_NAME}" PUBLIC PRODUCTION_BUILD=1) 		# remove the option to debug asserts.
+	target_compile_definitions(${PROJECT_NAME} PRIVATE DOMAINS_PATH="./domains/")
+	target_compile_definitions(${PROJECT_NAME} PRIVATE PRODUCTION_BUILD=1)
 else()
-	target_compile_definitions("${PROJECT_NAME}" PUBLIC DOMAINS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/domains/") 	# This is useful to get an DOMAINS_PATH in your IDE during development
-	target_compile_definitions("${PROJECT_NAME}" PUBLIC PRODUCTION_BUILD=0) 									# add the option to debug asserts.
+	target_compile_definitions(${PROJECT_NAME} PRIVATE DOMAINS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/domains/")
+	target_compile_definitions(${PROJECT_NAME} PRIVATE PRODUCTION_BUILD=0)
 endif()
 
-# If OS is Windows
-if (WIN32)
+# Linking libraries
+target_link_libraries(${PROJECT_NAME} PRIVATE
+		Boost::system
+		nlohmann_json::nlohmann_json
+)
+if(WIN32)
 	target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 wsock32)
 endif()
+if(ENABLE_HTTPS)
+	target_link_libraries(${PROJECT_NAME} PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+endif()
+if(ENABLE_LOGGING)
+	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog)
+endif()
 
-# If BOOST is found
-if (Boost_FOUND)
-	include_directories(SYSTEM ${Boost_INCLUDE_DIR} ${asio_SOURCE_DIR}/asio/include) # to link the header files
-    target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES}) # to link library
-endif ()
+# Install
+install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+install(DIRECTORY domains DESTINATION .)
