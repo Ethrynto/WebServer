@@ -1,119 +1,144 @@
 #include "RequestHandler.h"
+#include "../System/HtaccessConfig.h"
+#include "../Debug/Log.h"
 #include <fstream>
 #include <sstream>
 #include <filesystem>
-#include "../Debug/Log.h"
+#include <cstdlib>
+#include <stdio.h> // For popen/pclose
 
 namespace Network {
 
-    RequestHandler::RequestHandler(boost::asio::io_context& ioContext, std::string rootDir)
-            : ioContext_(ioContext), rootDir_(std::move(rootDir)) {}
+    RequestHandler::RequestHandler(boost::asio::io_context& ioContext, const std::string& rootDir)
+            : ioContext_(ioContext), rootDir_(rootDir) {
+        // Parse .htaccess for MIME types
+        htaccessConfig_ = System::HtaccessConfig::parse((std::filesystem::path(rootDir_) / ".htaccess").string());
+    }
 
-// Handle incoming HTTP request
     void RequestHandler::handleRequest(std::shared_ptr<boost::asio::ip::tcp::socket> socket) {
+        Debug::Log::info("Handling new request", "RequestHandler");
         try {
-            Debug::Log::info("Handling new request", "RequestHandler");
-            boost::asio::streambuf requestBuffer;
-            boost::asio::read_until(*socket, requestBuffer, "\r\n\r\n");
+            boost::asio::streambuf request;
+            boost::system::error_code error;
+            boost::asio::read_until(*socket, request, "\r\n\r\n", error);
 
-            std::istream requestStream(&requestBuffer);
+            if (error && error != boost::asio::error::eof) {
+                Debug::Log::error(std::format("Error reading request: {}", error.message()), "RequestHandler");
+                return;
+            }
+
+            std::stringstream requestStream;
+            requestStream << &request;
+
             std::string requestLine;
             std::getline(requestStream, requestLine);
+            Debug::Log::info(std::format("Received {} request for {}",
+                                         requestLine.substr(0, requestLine.find(' ')),
+                                         requestLine.substr(requestLine.find(' ') + 1,
+                                                            requestLine.find(' ', requestLine.find(' ') + 1) - requestLine.find(' ') - 1)),
+                             "RequestHandler");
 
-            std::istringstream requestLineStream(requestLine);
-            std::string method, path, version;
-            requestLineStream >> method >> path >> version;
+            std::string path = requestLine.substr(requestLine.find(' ') + 1,
+                                                  requestLine.find(' ', requestLine.find(' ') + 1) - requestLine.find(' ') - 1);
+            if (path == "/") path = "/index.html";
 
-            Debug::Log::info(std::format("Received {} request for {}", method, path), "RequestHandler");
+            std::stringstream responseStream;
+            std::string contentType = "text/html"; // Default MIME type
+            std::filesystem::path filePath = std::filesystem::path(rootDir_) / path.substr(1);
 
-            if (method != "GET") {
-                Debug::Log::warn("Unsupported method: " + method, "RequestHandler");
-                sendNotFound(socket);
-                return;
+            // Check MIME type from .htaccess
+            std::string extension = filePath.extension().string();
+            if (!extension.empty() && htaccessConfig_.mimeTypes.count(extension)) {
+                contentType = htaccessConfig_.mimeTypes[extension];
+                Debug::Log::info(std::format("Using MIME type {} for extension {}", contentType, extension), "RequestHandler");
             }
 
-            std::string filePath = rootDir_ + path;
-            if (filePath.ends_with("/")) filePath += "index.html";
+            responseStream << "HTTP/1.1 200 OK\r\nContent-Type: " << contentType << "\r\nConnection: close\r\n\r\n";
 
             if (!std::filesystem::exists(filePath)) {
-                Debug::Log::warn(std::format("File not found: {}", filePath), "RequestHandler");
-                sendNotFound(socket);
-                return;
-            }
-
-            if (filePath.ends_with(".php")) {
-                handlePhpRequest(socket, filePath);
-            } else {
-                std::ifstream file(filePath, std::ios::binary);
-                if (!file) {
-                    Debug::Log::error(std::format("Failed to open file: {}", filePath), "RequestHandler");
-                    sendNotFound(socket);
-                    return;
+                filePath = std::filesystem::path(rootDir_) / "index.php";
+                if (!std::filesystem::exists(filePath)) {
+                    responseStream.str("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n<h1>404 Not Found</h1>");
+                    Debug::Log::error(std::format("File not found: {}", filePath.string()), "RequestHandler");
                 }
-                std::ostringstream responseStream;
-                responseStream << "HTTP/1.1 200 OK\r\n";
-                responseStream << "Content-Type: " << getContentType(filePath) << "\r\n";
-                responseStream << "Connection: close\r\n\r\n";
-                responseStream << file.rdbuf();
-                boost::asio::write(*socket, boost::asio::buffer(responseStream.str()));
-                Debug::Log::info(std::format("Served static file: {}", filePath), "RequestHandler");
+
+            } else if (filePath.extension() == ".php") {
+                handlePhpRequest(filePath.string(), requestStream, responseStream);
+            } else {
+                serveStaticFile(filePath.string(), responseStream);
+            }
+
+            boost::asio::write(*socket, boost::asio::buffer(responseStream.str()), error);
+            if (error) {
+                Debug::Log::error(std::format("Error writing response: {}", error.message()), "RequestHandler");
             }
         } catch (const std::exception& e) {
-            Debug::Log::error(std::format("Request handling error: {}", e.what()), "RequestHandler");
-            sendNotFound(socket);
+            Debug::Log::error(std::format("Error handling request: {}", e.what()), "RequestHandler");
         }
     }
 
-// Handle PHP script execution
-    void RequestHandler::handlePhpRequest(std::shared_ptr<boost::asio::ip::tcp::socket> socket, const std::string& filePath) {
-        try {
-            std::string command =
+    void RequestHandler::serveStaticFile(const std::string& path, std::stringstream& responseStream) {
+        std::ifstream file(path, std::ios::binary);
+        if (file) {
+            std::stringstream content;
+            content << file.rdbuf();
+            responseStream << content.str();
+            Debug::Log::info(std::format("Served static file: {}", path), "RequestHandler");
+        } else {
+            responseStream.str("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n<h1>404 Not Found</h1>");
+            Debug::Log::error(std::format("Failed to open file: {}", path), "RequestHandler");
+        }
+    }
+
+    void RequestHandler::handlePhpRequest(const std::string& path, std::stringstream& requestStream, std::stringstream& responseStream) {
+        // Check if PHP is available
+        std::string phpCommand = std::string(
 #ifdef _WIN32
-                    "php \"" + filePath + "\"";
+                "php --version"
 #else
-            "php-cgi \"" + filePath + "\"";
+                "php-cgi --version"
 #endif
-            Debug::Log::info(std::format("Executing PHP: {}", command), "RequestHandler");
-            std::array<char, 128> buffer{};
-            std::string result;
-
-            std::shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pclose);
-            if (!pipe) {
-                Debug::Log::error("Failed to execute PHP script", "RequestHandler");
-                sendNotFound(socket);
-                return;
-            }
-
-            while (fgets(buffer.data(), buffer.size(), pipe.get())) {
-                result += buffer.data();
-            }
-
-            std::ostringstream responseStream;
-            responseStream << "HTTP/1.1 200 OK\r\n";
-            responseStream << "Content-Type: text/html\r\n";
-            responseStream << "Connection: close\r\n\r\n";
-            responseStream << result;
-            boost::asio::write(*socket, boost::asio::buffer(responseStream.str()));
-            Debug::Log::info(std::format("Served PHP file: {}", filePath), "RequestHandler");
-        } catch (const std::exception& e) {
-            Debug::Log::error(std::format("PHP execution error: {}", e.what()), "RequestHandler");
-            sendNotFound(socket);
+        );
+        if (std::system((phpCommand + " >nul 2>&1").c_str()) != 0) {
+            responseStream.str("HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n<h1>500 Internal Server Error</h1><p>PHP is not installed or not found in PATH.</p>");
+            Debug::Log::error("PHP is not installed or not found in PATH", "RequestHandler");
+            return;
         }
-    }
 
-// Determine Content-Type based on file extension
-    std::string RequestHandler::getContentType(const std::string& filePath) {
-        if (filePath.ends_with(".html") || filePath.ends_with(".php")) return "text/html";
-        if (filePath.ends_with(".css")) return "text/css";
-        if (filePath.ends_with(".js")) return "application/javascript";
-        return "application/octet-stream";
-    }
+        // Prepare PHP command
+        std::string command = std::string(
+#ifdef _WIN32
+                "php \""
+#else
+                "php-cgi \""
+#endif
+        ) + path + "\"";
 
-// Send 404 Not Found response
-    void RequestHandler::sendNotFound(std::shared_ptr<boost::asio::ip::tcp::socket> socket) {
-        std::string response = "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n";
-        boost::asio::write(*socket, boost::asio::buffer(response));
-        Debug::Log::info("Sent 404 Not Found response", "RequestHandler");
+#ifdef _WIN32
+        FILE* pipe = _popen(command.c_str(), "r");
+#else
+        FILE* pipe = popen(command.c_str(), "r");
+#endif
+        if (!pipe) {
+            responseStream.str("HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n<h1>500 Internal Server Error</h1>");
+            Debug::Log::error(std::format("Failed to execute PHP script: {}", path), "RequestHandler");
+            return;
+        }
+
+        char buffer[128];
+        std::stringstream phpOutput;
+        while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+            phpOutput << buffer;
+        }
+
+#ifdef _WIN32
+        _pclose(pipe);
+#else
+        pclose(pipe);
+#endif
+
+        responseStream << phpOutput.str();
+        Debug::Log::info(std::format("Served PHP file: {}", path), "RequestHandler");
     }
 
 } // namespace Network
