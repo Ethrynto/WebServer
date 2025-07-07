@@ -2,6 +2,8 @@
 #define LOG_H
 
 #include <string>
+#include <fstream>
+#include <mutex>
 
 namespace Debug
 {
@@ -9,6 +11,7 @@ namespace Debug
     {
     private:
         static std::string currentDateTime();
+        static void inputLog(const std::string& message);
 
     public:
         static void alert(const std::string& message, const std::string& file = "");

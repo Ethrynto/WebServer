@@ -4,40 +4,60 @@
 #include <ctime>
 
 namespace Debug {
+
+    static std::mutex logMutex;
+
     std::string Log::currentDateTime() {
-        time_t     now = time(0);
-        struct tm  tstruct;
+        time_t     now = time(nullptr);
+        struct tm  tm{};
         char       buf[80];
-        tstruct = *localtime(&now);
-        strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
+        tm = *localtime(&now);
+        strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tm);
 
         return buf;
     }
 
     void Log::alert(const std::string& message, const std::string& file)
     {
-        std::cout << "[" << Log::currentDateTime() << "] " << message;
-        if (file != "")
-            std::cout << " in " << file << std::endl;
+        std::string result = "[" + Log::currentDateTime() + "]";
+        if (!file.empty())
+            result += "[" + file + "] ";
 
-        std::cout << std::endl;
+        result += message + "\n";
+        Log::inputLog(result);
+        std::cout << result;
     }
 
     void Log::error(const std::string& message, const std::string& file)
     {
-        std::cerr << "[" << Log::currentDateTime() << "] " << message;
-        if (file != "")
-            std::cerr << " in " << file << std::endl;
+        std::string result = "[" + Log::currentDateTime() + "]";
+        if (!file.empty())
+            result += "[" + file + "] ";
 
-        std::cerr << std::endl;
+        result += message + "\n";
+        Log::inputLog(result);
+        std::cout << result;
     }
 
     void Log::warn(const std::string& message, const std::string& file)
     {
-        std::cerr << "[" << Log::currentDateTime() << "] " << message;
-        if (file != "")
-            std::cerr << " in " << file << std::endl;
+        std::string result = "[" + Log::currentDateTime() + "]";
+        if (!file.empty())
+            result += "[" + file + "] ";
 
-        std::cerr << std::endl;
+        result += message + "\n";
+        Log::inputLog(result);
+        std::cout << result;
     }
+
+    void Log::inputLog(const std::string &message) {
+        std::lock_guard<std::mutex> guard(logMutex);
+
+        std::ofstream logFile("app_logs.txt", std::ios::app);
+        if (logFile.is_open()) {
+            logFile << message;
+            logFile.close();
+        }
+    }
+
 } // System
