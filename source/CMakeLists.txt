@@ -1,9 +1,7 @@
 ﻿set(SOURCE_FILES
 		main.cpp
-		System/FileManager.cpp
-		System/FileManager.h
 
-		Network/WebServer.cpp
+        Network/WebServer.cpp
 		Network/WebServer.h
 		Network/RequestHandler.cpp
 		Network/RequestHandler.h
