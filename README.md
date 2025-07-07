@@ -6,6 +6,11 @@ This is a simple web server, processes the request and outputs the result. Works
 > [!NOTE]
 > Require **[CMake](https://cmake.org/), [Boost](https://boost.org), [Vcpkg](https://vcpkg.io/en/)**
 
+## Assembly
+```bash
+cmake .. -DCMAKE_PREFIX_PATH=C:/vcpkg/installed/x64-windows # Your vcpkg installed path
+cmake --build . --config Release
+```
 ## Web Server Documentation
 #### Overview
 The **WebServer** is a lightweight, asynchronous HTTP server built using **Boost.Asio** for network operations and **ImGui** for a graphical user interface. It serves static files (e.g., `.html`, `.css`) and dynamic PHP scripts from specified directories, supporting multiple projects on different ports. The server is designed to be cross-platform, running on Windows, Linux, and macOS, and is implemented in C++20 with a focus on extensibility and scalability.
