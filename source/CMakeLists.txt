@@ -8,6 +8,8 @@
 
 		Debug/Log.cpp
 		Debug/Log.h
+		System/HtaccessConfig.cpp
+		System/HtaccessConfig.h
 )
 
 # Add source to this project's executable.
