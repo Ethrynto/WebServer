@@ -8,6 +8,47 @@
 #include "Network/WebServer.h"
 #include "Debug/Log.h"
 #include "System/HtaccessConfig.h"
+#include <nlohmann/json.hpp>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+// Get path to the executable's directory
+std::string getExecutableDir() {
+    std::filesystem::path exePath;
+#ifdef _WIN32
+    char buffer[MAX_PATH];
+    GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+    exePath = std::filesystem::path(buffer).parent_path();
+#else
+    char buffer[1024];
+    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+    if (len != -1) {
+        buffer[len] = '\0';
+        exePath = std::filesystem::path(buffer).parent_path();
+    } else {
+        exePath = std::filesystem::current_path();
+    }
+#endif
+    return exePath.string();
+}
+
+// Load configuration from JSON (for future use)
+std::string getDomainsPath(const std::string& exeDir) {
+//    std::filesystem::path configPath = std::filesystem::path(exeDir) / "resources" / "config.json";
+//    std::ifstream configFile(configPath);
+//    if (configFile) {
+//        nlohmann::json config;
+//        configFile >> config;
+//        if (config.contains("domains_path")) {
+//            return (std::filesystem::path(exeDir) / config["domains_path"].get<std::string>()).string();
+//        }
+//    }
+    return (std::filesystem::path(exeDir) / "domains").string();
+}
 
 static void glfw_error_callback(int error, const char* description) {
     Debug::Log::error(std::format("GLFW Error {}: {}", error, description), "GLFW");
@@ -40,14 +81,16 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    // Load projects from DOMAINS_PATH
-    std::vector<std::pair<int, std::string>> projects;
-    std::filesystem::path domainsPath(DOMAINS_PATH);
+    // Determine domains path based on executable location
+    std::string exeDir = getExecutableDir();
+    std::string domainsPath = getDomainsPath(exeDir);
     if (!std::filesystem::exists(domainsPath)) {
-        Debug::Log::error(std::format("Domains path does not exist: {}", DOMAINS_PATH), "Main");
+        Debug::Log::error(std::format("Domains path does not exist: {}", domainsPath), "Main");
         return -1;
     }
 
+    // Load projects from domains path
+    std::vector<std::pair<int, std::string>> projects;
     int defaultPort = 8080;
     for (const auto& entry : std::filesystem::directory_iterator(domainsPath)) {
         if (entry.is_directory()) {
@@ -59,12 +102,12 @@ int main() {
             System::HtaccessConfig config = System::HtaccessConfig::parse(htaccessPath.string());
             if (config.port) {
                 port = *config.port;
+                Debug::Log::info(std::format("Loaded project: {} on port {}", entry.path().filename().string(), port), "Main");
             } else {
                 Debug::Log::warn(std::format("No valid port in .htaccess for {}, using default port {}", projectPath, port), "Main");
             }
 
             projects.emplace_back(port, projectPath);
-            Debug::Log::info(std::format("Loaded project: {} on port {}", entry.path().filename().string(), port), "Main");
         }
     }
 
