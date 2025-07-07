@@ -37,8 +37,15 @@ namespace System {
                 } else {
                     Debug::Log::error(std::format("Invalid port in .htaccess: {}", line), "HtaccessConfig");
                 }
+            } else if (directive == "AddType") {
+                std::string extension, mimeType;
+                if (ss >> extension >> mimeType) {
+                    config.mimeTypes[extension] = mimeType;
+                    Debug::Log::info(std::format("Parsed MIME type {} for extension {} from .htaccess: {}", mimeType, extension, filePath), "HtaccessConfig");
+                } else {
+                    Debug::Log::error(std::format("Invalid AddType in .htaccess: {}", line), "HtaccessConfig");
+                }
             }
-            // Future directives: AddType, SetEnv, etc.
         }
 
         return config;
