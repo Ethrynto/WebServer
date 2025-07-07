@@ -44,9 +44,11 @@ add_subdirectory(source)
 # Define paths
 if(PRODUCTION_BUILD)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE DOMAINS_PATH="./domains/")
+	target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCES_PATH="./resources/")
 	target_compile_definitions(${PROJECT_NAME} PRIVATE PRODUCTION_BUILD=1)
 else()
 	target_compile_definitions(${PROJECT_NAME} PRIVATE DOMAINS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/domains/")
+	target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/")
 	target_compile_definitions(${PROJECT_NAME} PRIVATE PRODUCTION_BUILD=0)
 endif()
 
